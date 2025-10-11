@@ -1,0 +1,25 @@
+-- Создаем таблицу пользователей
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Создаем таблицу заметок
+CREATE TABLE IF NOT EXISTS notes (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Создаем индексы для быстрого поиска
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);

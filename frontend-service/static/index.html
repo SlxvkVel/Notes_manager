@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Менеджер заметок</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .note { border: 1px solid #eee; padding: 10px; margin: 10px 0; background: #f9f9f9; }
+        .auth-buttons { display: flex; gap: 10px; }
+        .auth-buttons button { flex: 1; }
+    </style>
+</head>
+<body>
+    <h1>📝 Менеджер заметок</h1>
+    
+    <div class="container">
+        <h3>Аутентификация</h3>
+        <div class="auth-buttons">
+            <button onclick="register()">Авто-регистрация</button>
+            <button onclick="login()">Вход в аккаунт</button>
+            <button onclick="logout()">Выход</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>Создать заметку</h3>
+        <input type="text" id="title" placeholder="Заголовок заметки">
+        <textarea id="content" placeholder="Текст заметки" rows="4"></textarea>
+        <button onclick="createNote()">Создать заметку</button>
+    </div>
+
+    <div class="container">
+        <h3>Мои заметки</h3>
+        <button onclick="getNotes()">Обновить список</button>
+        <div id="notes"></div>
+    </div>
+
+    <script>
+        function generateRandomUser() {
+            const randomId = Math.floor(Math.random() * 10000);
+            return {
+                username: 'user_' + randomId,
+                email: 'test' + randomId + '@example.com',
+                password: 'password123'
+            };
+        }
+
+        async function register() {
+            const user = generateRandomUser();
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify(user)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                alert(`✅ Регистрация успешна!\n\nEmail: ${user.email}\nPassword: ${user.password}`);
+            } catch (error) {
+                alert('❌ Ошибка регистрации: ' + error.message);
+            }
+        }
+
+        async function login() {
+            const email = prompt('Введите email:');
+            const password = prompt('Введите пароль:');
+            
+            if (!email || !password) return;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({email, password})
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                alert('✅ Логин успешен!');
+            } catch (error) {
+                alert('❌ Ошибка логина: ' + error.message);
+            }
+        }
+
+        async function createNote() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            
+            if (!title || !content) {
+                alert('Заполните заголовок и текст заметки');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/notes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        title: title,
+                        content: content
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                alert('✅ Заметка создана!');
+                
+                // Очищаем поля
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                
+                // Обновляем список
+                getNotes();
+            } catch (error) {
+                alert('❌ Ошибка создания заметки: ' + error.message);
+            }
+        }
+
+        async function getNotes() {
+            try {
+                const response = await fetch('/api/notes/list', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayNotes(data.notes);
+            } catch (error) {
+                document.getElementById('notes').innerHTML = '❌ Ошибка загрузки заметок';
+            }
+        }
+
+        function displayNotes(notes) {
+            const container = document.getElementById('notes');
+            if (!notes || notes.length === 0) {
+                container.innerHTML = '<p>Нет заметок</p>';
+                return;
+            }
+            
+            container.innerHTML = notes.map(note => `
+                <div class="note">
+                    <h4>${note.title}</h4>
+                    <p>${note.content}</p>
+                    <small>Создано: ${new Date(note.created_at).toLocaleString()}</small>
+                </div>
+            `).join('');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                alert('✅ Выход выполнен');
+                document.getElementById('notes').innerHTML = '';
+            } catch (error) {
+                alert('❌ Ошибка выхода: ' + error);
+            }
+        }
+
+        // Загружаем заметки при загрузке страницы
+        window.onload = getNotes;
+    </script>
+</body>
+</html>

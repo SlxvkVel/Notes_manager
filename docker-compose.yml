@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend-service
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - notes-service
+    networks:
+      - notes-network
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=notes_manager
+      - DB_SSLMODE=disable
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - notes-network
+
+  notes-service:
+    build: ./notes-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=notes_manager
+      - DB_SSLMODE=disable
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    depends_on:
+      - postgres
+    networks:
+      - notes-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=notes_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - notes-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - notes-network
+
+volumes:
+  postgres_data:
+
+networks:
+  notes-network:
+    driver: bridge

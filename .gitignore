@@ -1,0 +1,11 @@
+kubectl.exe
+minikube.exe
+*.exe
+
+.vscode/
+.idea/
+
+*.log
+
+tmp/
+temp/

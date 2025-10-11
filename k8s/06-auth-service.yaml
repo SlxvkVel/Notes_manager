@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: notes-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: slxvkvel/auth-service:1.1  
+        imagePullPolicy: Always 
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: DB_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_NAME
+        - name: DB_SSLMODE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_SSLMODE
+        - name: JWT_SECRET
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: JWT_SECRET
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_HOST
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: notes-manager
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 8080
+    targetPort: 8080
