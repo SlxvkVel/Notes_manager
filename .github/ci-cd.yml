@@ -35,5 +35,5 @@ jobs:
 
     - name: Verify images
       run: |
-        echo "Все образы успешно собраны:"
+        echo "Все образы успешно собраны :"
         docker images | grep -E "(auth-service|notes-service|frontend)"
