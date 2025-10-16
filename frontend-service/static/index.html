@@ -13,98 +13,181 @@
         .note { border: 1px solid #eee; padding: 10px; margin: 10px 0; background: #f9f9f9; }
         .auth-buttons { display: flex; gap: 10px; }
         .auth-buttons button { flex: 1; }
+        .auth-form { display: none; margin-top: 10px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 5px; background: #f8f9fa; }
+        .user-info { display: none; margin-top: 10px; padding: 10px; background: #e8f5e8; border-radius: 5px; }
     </style>
 </head>
 <body>
     <h1>📝 Менеджер заметок</h1>
-    
     <div class="container">
-        <h3>Аутентификация</h3>
+        <h3>Профиль</h3>
         <div class="auth-buttons">
-            <button onclick="register()">Авто-регистрация</button>
-            <button onclick="login()">Вход в аккаунт</button>
-            <button onclick="logout()">Выход</button>
+            <button onclick="toggleForm('registerForm')">Регистрация</button>
+            <button onclick="toggleForm('loginForm')">Вход</button>
+            <button onclick="logout()" style="background: #6c757d;">Выход</button>
+        </div>
+        <div id="registerForm" class="auth-form">
+            <h4>Регистрация</h4>
+            <input type="text" id="regUsername" placeholder="Имя пользователя" required>
+            <input type="email" id="regEmail" placeholder="Email" required>
+            <input type="password" id="regPassword" placeholder="Пароль" required>
+            <button onclick="register()">Зарегистрироваться</button>
+            <button onclick="toggleForm('registerForm')" style="background: #6c757d; margin-top: 5px;">Отмена</button>
+        </div>
+        <div id="loginForm" class="auth-form">
+            <h4>Вход</h4>
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Пароль" required>
+            <button onclick="login()">Войти</button>
+            <button onclick="toggleForm('loginForm')" style="background: #6c757d; margin-top: 5px;">Отмена</button>
+        </div>
+        <div id="userInfo" class="user-info">
+            <strong>Вы вошли как: <span id="currentUser"></span></strong>
         </div>
     </div>
-
     <div class="container">
         <h3>Создать заметку</h3>
         <input type="text" id="title" placeholder="Заголовок заметки">
         <textarea id="content" placeholder="Текст заметки" rows="4"></textarea>
         <button onclick="createNote()">Создать заметку</button>
     </div>
-
     <div class="container">
         <h3>Мои заметки</h3>
         <button onclick="getNotes()">Обновить список</button>
         <div id="notes"></div>
     </div>
-
     <script>
-        function generateRandomUser() {
-            const randomId = Math.floor(Math.random() * 10000);
-            return {
-                username: 'user_' + randomId,
-                email: 'test' + randomId + '@example.com',
-                password: 'password123'
-            };
+        let currentUsername = '';
+        function toggleForm(formId) {
+            const forms = document.querySelectorAll('.auth-form');
+            forms.forEach(form => {
+                form.style.display = 'none';
+            });
+            const form = document.getElementById(formId);
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+            }
+            document.getElementById('userInfo').style.display = 'none';
         }
-
+        function showUserInfo(username) {
+            currentUsername = username;
+            document.getElementById('currentUser').textContent = username;
+            document.getElementById('userInfo').style.display = 'block';
+            const forms = document.querySelectorAll('.auth-form');
+            forms.forEach(form => {
+                form.style.display = 'none';
+            });
+        }
         async function register() {
-            const user = generateRandomUser();
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            if (!username || !email || !password) {
+                alert('Заполните все поля для регистрации');
+                return;
+            }  
             try {
                 const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify(user)
-                });
-                
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });   
+                const responseText = await response.text();
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                 }
-                
-                const data = await response.json();
-                alert(`✅ Регистрация успешна!\n\nEmail: ${user.email}\nPassword: ${user.password}`);
+                const data = JSON.parse(responseText);
+                document.getElementById('regUsername').value = '';
+                document.getElementById('regEmail').value = '';
+                document.getElementById('regPassword').value = '';
+                toggleForm('registerForm');
+                showUserInfo(username);
+                alert(`✅ Регистрация успешна!\n\nДобро пожаловать, ${username}!`);
             } catch (error) {
-                alert('❌ Ошибка регистрации: ' + error.message);
+                let errorMessage = 'Ошибка регистрации';
+                if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+                    errorMessage = '❌ Пользователь с таким email или именем уже существует';
+                } else if (error.message.includes('400')) {
+                    errorMessage = '❌ Неверные данные для регистрации';
+                } else if (error.message.includes('500')) {
+                    errorMessage = '❌ Ошибка сервера, попробуйте позже';
+                } else {
+                    errorMessage = '❌ ' + error.message;
+                }
+                alert(errorMessage);
             }
         }
-
         async function login() {
-            const email = prompt('Введите email:');
-            const password = prompt('Введите пароль:');
-            
-            if (!email || !password) return;
-            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) {
+                alert('Заполните email и пароль');
+                return;
+            }
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify({email, password})
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
                 });
-                
+                const responseText = await response.text();
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                 }
-                
-                const data = await response.json();
-                alert('✅ Логин успешен!');
+                const data = JSON.parse(responseText);
+                document.getElementById('loginEmail').value = '';
+                document.getElementById('loginPassword').value = '';
+                toggleForm('loginForm');
+                showUserInfo(data.username || email.split('@')[0]);
+                alert('✅ Вход выполнен успешно!');
+                getNotes();
             } catch (error) {
-                alert('❌ Ошибка логина: ' + error.message);
+                let errorMessage = 'Ошибка входа';
+                if (error.message.includes('401') || error.message.includes('invalid credentials')) {
+                    errorMessage = '❌ Неверный email или пароль';
+                } else if (error.message.includes('400')) {
+                    errorMessage = '❌ Заполните все поля';
+                } else if (error.message.includes('500')) {
+                    errorMessage = '❌ Ошибка сервера, попробуйте позже';
+                } else if (error.message.includes('user not found')) {
+                    errorMessage = '❌ Пользователь не найден';
+                } else {
+                    errorMessage = '❌ ' + error.message;
+                }
+                alert(errorMessage);
             }
         }
-
         async function createNote() {
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
-            
             if (!title || !content) {
                 alert('Заполните заголовок и текст заметки');
                 return;
             }
-            
             try {
                 const response = await fetch('/api/notes', {
                     method: 'POST',
@@ -115,49 +198,71 @@
                         content: content
                     })
                 });
-                
+                const responseText = await response.text();
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                 }
-                
-                const data = await response.json();
+                const data = JSON.parse(responseText);
                 alert('✅ Заметка создана!');
-                
-                // Очищаем поля
                 document.getElementById('title').value = '';
                 document.getElementById('content').value = '';
-                
-                // Обновляем список
                 getNotes();
             } catch (error) {
-                alert('❌ Ошибка создания заметки: ' + error.message);
+                let errorMessage = 'Ошибка создания заметки';
+                if (error.message.includes('401') || error.message.includes('Пользователь не авторизован')) {
+                    errorMessage = '❌ Для создания заметки необходимо войти в систему';
+                } else if (error.message.includes('400')) {
+                    errorMessage = '❌ Неверные данные для заметки';
+                } else if (error.message.includes('500')) {
+                    errorMessage = '❌ Ошибка сервера, попробуйте позже';
+                } else {
+                    errorMessage = '❌ ' + error.message;
+                }
+
+                alert(errorMessage);
             }
         }
-
         async function getNotes() {
             try {
                 const response = await fetch('/api/notes/list', {
                     credentials: 'include'
                 });
                 
+                const responseText = await response.text();
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }  
+                const data = JSON.parse(responseText);
                 displayNotes(data.notes);
             } catch (error) {
-                document.getElementById('notes').innerHTML = '❌ Ошибка загрузки заметок';
+                let errorMessage = 'Ошибка загрузки заметок'; 
+                if (error.message.includes('401') || error.message.includes('Пользователь не авторизован')) {
+                    errorMessage = '❌ Для просмотра заметок необходимо войти в систему';
+                } else {
+                    errorMessage = '❌ ' + error.message;
+                }
+                
+                document.getElementById('notes').innerHTML = errorMessage;
             }
         }
-
         function displayNotes(notes) {
             const container = document.getElementById('notes');
             if (!notes || notes.length === 0) {
                 container.innerHTML = '<p>Нет заметок</p>';
                 return;
-            }
-            
+            }           
             container.innerHTML = notes.map(note => `
                 <div class="note">
                     <h4>${note.title}</h4>
@@ -166,7 +271,6 @@
                 </div>
             `).join('');
         }
-
         async function logout() {
             try {
                 await fetch('/api/auth/logout', {
@@ -175,12 +279,12 @@
                 });
                 alert('✅ Выход выполнен');
                 document.getElementById('notes').innerHTML = '';
+                document.getElementById('userInfo').style.display = 'none';
+                currentUsername = '';
             } catch (error) {
                 alert('❌ Ошибка выхода: ' + error);
             }
         }
-
-        // Загружаем заметки при загрузке страницы
         window.onload = getNotes;
     </script>
 </body>
