@@ -84,81 +84,90 @@ func GetNotesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPut {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
+    userID, err := tools.ExtractUserIDFromToken(r)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
 
-	userID, err := tools.ExtractUserIDFromToken(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+    // Получаем ID из query параметра вместо пути
+    noteIDStr := r.URL.Query().Get("id")
+    noteID, err := strconv.Atoi(noteIDStr)
+    if err != nil || noteIDStr == "" {
+        http.Error(w, "Invalid note ID", http.StatusBadRequest)
+        return
+    }
 
-	
-	noteIDStr := r.URL.Query().Get("id")
-	noteID, err := strconv.Atoi(noteIDStr)
-	if err != nil {
-		http.Error(w, "Invalid note ID", http.StatusBadRequest)
-		return
-	}
+    var req models.UpdateNoteRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        log.Println("Error decoding request body:", err)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
 
-	var req models.UpdateNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Println("Error decoding request body:", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+    err = storage.UpdateNote(r.Context(), int32(noteID), userID, req.Title, req.Content)
+    if err != nil {
+        log.Println("Error updating note:", err)
+        http.Error(w, "Error updating note", http.StatusInternalServerError)
+        return
+    }
 
-	
-	err = storage.UpdateNote(r.Context(), int32(noteID), userID, req.Title, req.Content)
-	if err != nil {
-		log.Println("Error updating note:", err)
-		http.Error(w, "Error updating note", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Note updated successfully",
-	})
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Note updated successfully",
+    })
 }
 
 func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodDelete {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	
-	userID, err := tools.ExtractUserIDFromToken(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+    userID, err := tools.ExtractUserIDFromToken(r)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
 
-	noteIDStr := r.URL.Query().Get("id")
-	noteID, err := strconv.Atoi(noteIDStr)
-	if err != nil {
-		http.Error(w, "Invalid note ID", http.StatusBadRequest)
-		return
-	}
+    // Получаем ID из query параметра вместо пути
+    noteIDStr := r.URL.Query().Get("id")
+    noteID, err := strconv.Atoi(noteIDStr)
+    if err != nil || noteIDStr == "" {
+        http.Error(w, "Invalid note ID", http.StatusBadRequest)
+        return
+    }
 
-	err = storage.DeleteNote(r.Context(), int32(noteID), userID)
-	if err != nil {
-		log.Println("Error deleting note:", err)
-		http.Error(w, "Error deleting note", http.StatusInternalServerError)
-		return
-	}
+    err = storage.DeleteNote(r.Context(), int32(noteID), userID)
+    if err != nil {
+        log.Println("Error deleting note:", err)
+        http.Error(w, "Error deleting note", http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Note deleted successfully",
-	})
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Note deleted successfully",
+    })
 }
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
+}
+
+func NoteDetailHandler(w http.ResponseWriter, r *http.Request) {
+    switch r.Method {
+    case http.MethodPut:
+        UpdateNoteHandler(w, r)
+    case http.MethodDelete:
+        DeleteNoteHandler(w, r)
+    default:
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+    }
 }

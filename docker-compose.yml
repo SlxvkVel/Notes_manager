@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    build: ./frontend-service
+    image: slxvkvel/frontend:1.1  
     ports:
       - "80:80"
     depends_on:
@@ -12,7 +12,7 @@ services:
       - notes-network
 
   auth-service:
-    build: ./auth-service
+    image: slxvkvel/auth-service:1.1  
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -30,7 +30,7 @@ services:
       - notes-network
 
   notes-service:
-    build: ./notes-service
+    image: slxvkvel/notes-service:1.1  
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
