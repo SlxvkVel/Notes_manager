@@ -1,5 +1,3 @@
-kubectl.exe
-minikube.exe
 *.exe
 
 .vscode/
