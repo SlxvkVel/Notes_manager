@@ -17,6 +17,6 @@ func main() {
     http.HandleFunc("/api/notes/update", handlers.UpdateNoteHandler)
     http.HandleFunc("/api/notes/delete", handlers.DeleteNoteHandler)
     
-    log.Println("📝 Notes service starting on port 8081...")
+    log.Println("Notes service starting on port 8081...")
     log.Fatal(http.ListenAndServe(":8081", nil))
 }

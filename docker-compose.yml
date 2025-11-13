@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    image: slxvkvel/frontend:1.1  
+    image: ${FRONTEND_IMAGE:-slxvkvel/frontend:1.1}
     ports:
       - "80:80"
     depends_on:
@@ -12,17 +12,17 @@ services:
       - notes-network
 
   auth-service:
-    image: slxvkvel/auth-service:1.1  
+    image: ${AUTH_SERVICE_IMAGE:-slxvkvel/auth-service:1.1}
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_NAME=notes_manager
-      - DB_SSLMODE=disable
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
     depends_on:
       - postgres
       - redis
@@ -30,15 +30,15 @@ services:
       - notes-network
 
   notes-service:
-    image: slxvkvel/notes-service:1.1  
+    image: ${NOTES_SERVICE_IMAGE:-slxvkvel/notes-service:1.1}
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_NAME=notes_manager
-      - DB_SSLMODE=disable
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - postgres
     networks:
@@ -47,9 +47,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=notes_manager
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
