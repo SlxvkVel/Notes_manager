@@ -67,7 +67,7 @@ func GetUserNotes(ctx context.Context, userID int32) ([]models.Note, error) {
 	// Сначала пробуем получить из кэша
 	cachedNotes, err := cache.GetCachedUserNotes(userID)
 	if err == nil && len(cachedNotes) > 0 {
-		log.Printf("✅ Got notes from cache for user %d", userID)
+		log.Printf(" Got notes from cache for user %d", userID)
 		return cachedNotes, nil
 	}
 	
@@ -102,28 +102,28 @@ func GetUserNotes(ctx context.Context, userID int32) ([]models.Note, error) {
 func UpdateNote(ctx context.Context, noteID int32, userID int32, title, content string) error {
 	once.Do(initDB)
 	
-	log.Printf("🔄 Storage UpdateNote - noteID: %d, userID: %d, title: %s", noteID, userID, title)
+	log.Printf(" Storage UpdateNote - noteID: %d, userID: %d, title: %s", noteID, userID, title)
 	
 	result, err := dbPool.Exec(ctx,
 		"UPDATE notes SET title = $1, content = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4",
 		title, content, noteID, userID)
 		
 	if err != nil {
-		log.Printf("❌ Storage UpdateNote - DB error: %v", err)
+		log.Printf(" Storage UpdateNote - DB error: %v", err)
 		return fmt.Errorf("error updating note: %w", err)
 	}
 
 	rowsAffected := result.RowsAffected()
-	log.Printf("📊 Storage UpdateNote - Rows affected: %d", rowsAffected)
+	log.Printf(" Storage UpdateNote - Rows affected: %d", rowsAffected)
 	
 	if rowsAffected == 0 {
-		log.Printf("❌ Storage UpdateNote - No rows affected: noteID=%d, userID=%d", noteID, userID)
+		log.Printf(" Storage UpdateNote - No rows affected: noteID=%d, userID=%d", noteID, userID)
 		return fmt.Errorf("note not found or access denied")
 	}
 
 	// Очищаем кэш пользователя после обновления
 	cache.InvalidateUserCache(userID)
-	log.Printf("✅ Storage UpdateNote - Successfully updated note %d for user %d", noteID, userID)
+	log.Printf(" Storage UpdateNote - Successfully updated note %d for user %d", noteID, userID)
 	
 	return nil
 }
@@ -131,28 +131,28 @@ func UpdateNote(ctx context.Context, noteID int32, userID int32, title, content 
 func DeleteNote(ctx context.Context, noteID int32, userID int32) error {
 	once.Do(initDB)
 	
-	log.Printf("🔄 Storage DeleteNote - noteID: %d, userID: %d", noteID, userID)
+	log.Printf(" Storage DeleteNote - noteID: %d, userID: %d", noteID, userID)
 	
 	result, err := dbPool.Exec(ctx,
 		"DELETE FROM notes WHERE id = $1 AND user_id = $2",
 		noteID, userID)
 		
 	if err != nil {
-		log.Printf("❌ Storage DeleteNote - DB error: %v", err)
+		log.Printf(" Storage DeleteNote - DB error: %v", err)
 		return fmt.Errorf("error deleting note: %w", err)
 	}
 
 	rowsAffected := result.RowsAffected()
-	log.Printf("📊 Storage DeleteNote - Rows affected: %d", rowsAffected)
+	log.Printf(" Storage DeleteNote - Rows affected: %d", rowsAffected)
 	
 	if rowsAffected == 0 {
-		log.Printf("❌ Storage DeleteNote - No rows affected: noteID=%d, userID=%d", noteID, userID)
+		log.Printf(" Storage DeleteNote - No rows affected: noteID=%d, userID=%d", noteID, userID)
 		return fmt.Errorf("note not found or access denied")
 	}
 
 	// Очищаем кэш пользователя после удаления
 	cache.InvalidateUserCache(userID)
-	log.Printf("✅ Storage DeleteNote - Successfully deleted note %d for user %d", noteID, userID)
+	log.Printf(" Storage DeleteNote - Successfully deleted note %d for user %d", noteID, userID)
 	
 	return nil
 }
@@ -160,7 +160,7 @@ func DeleteNote(ctx context.Context, noteID int32, userID int32) error {
 func GetNoteByID(ctx context.Context, noteID int32, userID int32) (*models.Note, error) {
 	once.Do(initDB)
 	
-	log.Printf("🔍 Storage GetNoteByID - noteID: %d, userID: %d", noteID, userID)
+	log.Printf(" Storage GetNoteByID - noteID: %d, userID: %d", noteID, userID)
 	
 	var note models.Note
 	err := dbPool.QueryRow(ctx,
@@ -168,10 +168,10 @@ func GetNoteByID(ctx context.Context, noteID int32, userID int32) (*models.Note,
 		noteID, userID).Scan(&note.ID, &note.Title, &note.Content, &note.UserID, &note.CreatedAt, &note.UpdatedAt)
 		
 	if err != nil {
-		log.Printf("❌ Storage GetNoteByID - DB error: %v", err)
+		log.Printf(" Storage GetNoteByID - DB error: %v", err)
 		return nil, fmt.Errorf("error fetching note: %w", err)
 	}
 
-	log.Printf("✅ Storage GetNoteByID - Found note: ID=%d, Title=%s", note.ID, note.Title)
+	log.Printf(" Storage GetNoteByID - Found note: ID=%d, Title=%s", note.ID, note.Title)
 	return &note, nil
 }
